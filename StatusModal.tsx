@@ -18,10 +18,12 @@ import { Checkbox, Modal, openModal, Select, showToast, TextInput, Tooltip, useR
 
 import { boardCategories, findStation, findTrain, formatTrainDateLabel, getYesterdayString, resolveTrainDate, toLocalDateString } from "./api";
 import { DEFAULT_STATUS_FORMAT, DEFAULT_TRAIN_FORMAT, PLACEHOLDERS, TRAIN_PLACEHOLDERS } from "./format";
+import { PATTERNS } from "./patterns";
 import { type Mode, settings } from "./settings";
-import { tick } from "./status";
+import { refresh } from "./status";
 
 const cl = classNameFactory("vc-bahnexpert-");
+const { today: TODAY, yesterday: YESTERDAY } = PATTERNS.dateKeywords;
 
 const MODE_OPTIONS = [
     { label: "Departures from a station", value: "departures" },
@@ -79,23 +81,23 @@ function FormatField({ value, placeholders, onChange }: FormatFieldProps) {
 function StatusModal({ modalProps }: { modalProps: RenderModalProps; }) {
     const { store } = settings;
     const [mode, setMode] = useState<Mode>(store.mode === "train" ? "train" : "departures");
-    const [station, setStation] = useState(store.station);
-    const [via, setVia] = useState(store.via);
+    const [station, setStation] = useState(store.station ?? "");
+    const [via, setVia] = useState(store.via ?? "");
     const [format, setFormat] = useState(store.format || DEFAULT_STATUS_FORMAT);
-    const [categories, setCategories] = useState(store.categories.split(",").map(c => c.trim()).filter(Boolean));
+    const [categories, setCategories] = useState((store.categories ?? "").split(",").map(c => c.trim()).filter(Boolean));
     const [available, setAvailable] = useState(categories);
-    const [train, setTrain] = useState(store.train);
+    const [train, setTrain] = useState(store.train ?? "");
     const [trainDate, setTrainDate] = useState(store.trainDate || "");
     const [trainFormat, setTrainFormat] = useState(store.trainFormat || DEFAULT_TRAIN_FORMAT);
     const [busy, setBusy] = useState(false);
 
     const todayStr = toLocalDateString();
     const yesterdayStr = getYesterdayString();
-    const isToday = !trainDate || trainDate === "today" || trainDate === todayStr;
-    const isYesterday = trainDate === "yesterday" || trainDate === yesterdayStr;
-    const calendarValue = trainDate === "yesterday"
+    const isToday = !trainDate || trainDate === TODAY || trainDate === todayStr;
+    const isYesterday = trainDate === YESTERDAY || trainDate === yesterdayStr;
+    const calendarValue = trainDate === YESTERDAY
         ? yesterdayStr
-        : (!trainDate || trainDate === "today" ? todayStr : trainDate);
+        : (!trainDate || trainDate === TODAY ? todayStr : trainDate);
 
     function toggleCategory(category: string, on: boolean) {
         setCategories(on ? [...categories, category] : categories.filter(c => c !== category));
@@ -131,7 +133,7 @@ function StatusModal({ modalProps }: { modalProps: RenderModalProps; }) {
                     return;
                 }
                 store.train = train.trim();
-                store.trainDate = isToday ? "" : (isYesterday && trainDate === "yesterday" ? "yesterday" : trainDate);
+                store.trainDate = toLocalDateString(date);
                 store.trainFormat = trainFormat.trim() || DEFAULT_TRAIN_FORMAT;
                 showToast({ text: `Following ${journey.train.name} to ${journey.finalDestination}.`, variant: "success" });
             } else {
@@ -147,7 +149,7 @@ function StatusModal({ modalProps }: { modalProps: RenderModalProps; }) {
                 showToast({ text: `Showing departures from ${place.name}.`, variant: "success" });
             }
             store.mode = mode;
-            tick();
+            refresh();
             modalProps.onClose();
         } catch {
             showToast({ text: "bahn.expert did not answer. Try again in a moment.", variant: "critical" });
@@ -166,7 +168,7 @@ function StatusModal({ modalProps }: { modalProps: RenderModalProps; }) {
             subtitle="Shown as the status of whichever voice channel you are in."
             actions={[{ text: "Save", variant: "primary", disabled: busy || !ready, onClick: save }]}
         >
-            <form className={cl("content")} onSubmit={e => { e.preventDefault(); save(); }}>
+            <form className={cl("content")} onSubmit={e => { e.preventDefault(); if (!busy && ready) save(); }}>
                 <section className={Margins.bottom16}>
                     <Heading tag="h5">Mode</Heading>
                     <Select options={MODE_OPTIONS} isSelected={v => v === mode} select={setMode} serialize={v => v} />
@@ -186,7 +188,7 @@ function StatusModal({ modalProps }: { modalProps: RenderModalProps; }) {
                                         type="button"
                                         size="small"
                                         variant={isToday ? "primary" : "secondary"}
-                                        onClick={() => setTrainDate("today")}
+                                        onClick={() => setTrainDate(TODAY)}
                                     >
                                         Today
                                     </Button>
@@ -194,7 +196,7 @@ function StatusModal({ modalProps }: { modalProps: RenderModalProps; }) {
                                         type="button"
                                         size="small"
                                         variant={isYesterday ? "primary" : "secondary"}
-                                        onClick={() => setTrainDate("yesterday")}
+                                        onClick={() => setTrainDate(YESTERDAY)}
                                     >
                                         Yesterday
                                     </Button>
@@ -203,7 +205,7 @@ function StatusModal({ modalProps }: { modalProps: RenderModalProps; }) {
                                     type="date"
                                     className={cl("date-input")}
                                     value={calendarValue}
-                                    onClick={e => (e.target as HTMLInputElement).showPicker?.()}
+                                    onClick={e => e.currentTarget.showPicker()}
                                     onChange={e => setTrainDate(e.target.value)}
                                 />
                             </div>

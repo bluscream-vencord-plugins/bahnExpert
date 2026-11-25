@@ -5,6 +5,8 @@
  */
 
 import { ApplicationCommandInputType, ApplicationCommandOptionType, findOption, sendBotMessage } from "@api/Commands";
+import { Button } from "@components/Button";
+import ErrorBoundary from "@components/ErrorBoundary";
 import { Logger } from "@utils/Logger";
 import definePlugin from "@utils/types";
 import { type Channel } from "@vencord/discord-types";
@@ -12,10 +14,11 @@ import { ChannelType } from "@vencord/discord-types/enums";
 import { Menu } from "@webpack/common";
 
 import { findStation, findTrain, formatTrainDateLabel, nextDepartures, resolveTrainDate } from "./api";
-import { CHAT_FORMAT, DEFAULT_TRAIN_FORMAT, formatDeparture, formatTrain } from "./format";
 import { BahnExpertError } from "./bahn-expert-ts/src";
+import { CHAT_FORMAT, DEFAULT_TRAIN_FORMAT, formatDeparture, formatTrain } from "./format";
+import { PATTERNS } from "./patterns";
 import { settings } from "./settings";
-import { beforeVoiceChannelSelect, onVoiceStateUpdates, start, stop } from "./status";
+import { deferVoiceChannelSelect, onVoiceStateUpdates, start, stop } from "./status";
 import { openStatusModal } from "./StatusModal";
 
 const logger = new Logger("BahnExpert");
@@ -28,11 +31,31 @@ function failure(error: unknown): string {
         : "Something went wrong while asking bahn.expert.";
 }
 
+const ToolboxItems = ErrorBoundary.wrap(() => {
+    const { active } = settings.use(ACTIVE_KEY);
+    return (
+        <>
+            <Menu.MenuCheckboxItem
+                id={PATTERNS.menuIds.toolboxActive}
+                label="Bahn Status"
+                checked={active}
+                action={() => { settings.store.active = !settings.store.active; }}
+            />
+            <Menu.MenuItem id={PATTERNS.menuIds.toolboxConfigure} label="Configure Bahn Status" action={() => openStatusModal()} />
+        </>
+    );
+}, { noop: true });
+
+function ConfigureButton() {
+    return <Button onClick={() => openStatusModal()}>Configure the status text</Button>;
+}
+
 export default definePlugin({
     name: "BahnExpert",
     description: "Train departures from bahn.expert, as slash commands and as a live voice channel status that follows you.",
     authors: [{ name: "Bluscream", id: 467777925790564352n }, { name: "b1uscr34m", id: 896443818935713853n }],
     settings,
+    settingsAboutComponent: ConfigureButton,
 
     commands: [
         {
@@ -103,46 +126,33 @@ export default definePlugin({
             children.push(
                 <Menu.MenuGroup>
                     <Menu.MenuCheckboxItem
-                        id="vc-bahnexpert-active"
+                        id={PATTERNS.menuIds.active}
                         label="Bahn Status"
                         checked={settings.store.active}
                         action={() => { settings.store.active = !settings.store.active; }}
                     />
-                    <Menu.MenuItem id="vc-bahnexpert-configure" label="Configure Bahn Status" action={() => openStatusModal()} />
+                    <Menu.MenuItem id={PATTERNS.menuIds.configure} label="Configure Bahn Status" action={() => openStatusModal()} />
                 </Menu.MenuGroup>
             );
         },
     },
 
-    toolboxActions() {
-        const { active } = settings.use(ACTIVE_KEY);
-        return (
-            <>
-                <Menu.MenuCheckboxItem
-                    id="vc-bahnexpert-toolbox-active"
-                    label="Bahn Status"
-                    checked={active}
-                    action={() => { settings.store.active = !active; }}
-                />
-                <Menu.MenuItem id="vc-bahnexpert-toolbox-configure" label="Configure Bahn Status" action={() => openStatusModal()} />
-            </>
-        );
-    },
+    toolboxActions: () => <ToolboxItems />,
 
     patches: [
         {
-            find: 'type:"VOICE_CHANNEL_SHOW_FEEDBACK"',
+            find: PATTERNS.voiceSelect.find,
             replacement: {
-                match: /selectVoiceChannel\((\i)\)\{/,
-                replace: "async $& await $self.beforeVoiceChannelSelect($1);",
+                match: PATTERNS.voiceSelect.match,
+                replace: "$&if($self.deferVoiceChannelSelect(arguments))return;",
             },
         },
     ],
-    beforeVoiceChannelSelect,
+    deferVoiceChannelSelect,
 
     flux: {
         VOICE_STATE_UPDATES({ voiceStates }: { voiceStates: { userId: string; channelId?: string | null; oldChannelId?: string | null; }[]; }) {
-            onVoiceStateUpdates(voiceStates);
+            return onVoiceStateUpdates(voiceStates);
         },
     },
 

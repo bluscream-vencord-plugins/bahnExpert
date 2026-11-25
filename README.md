@@ -46,8 +46,9 @@ back; if there was nothing to put back, the status is cleared. The plugin lets g
 the channel, move to another one, switch the toggle off, or disable the plugin. Discord only
 accepts status writes from ordinary members while they are connected, which is why the status
 follows you instead of staying on a channel, and why the plugin hooks Discord's own leave and
-switch routine: the restore is sent and awaited before the client tells the server you left.
-Being kicked, moved or dropped by the server skips that path; the restore is then attempted
+switch routine: the restore is sent first, and the leave or switch goes out once it is done or
+after at most one second, whichever comes first. If you click again meanwhile, only your latest
+choice is carried out. Being kicked, moved or dropped by the server skips that path; the restore is then attempted
 afterwards and succeeds only if you may set statuses in channels you are not in.
 
 ### Filtering by Verkehrsmittel
@@ -120,12 +121,14 @@ boundary, and both are validated there. The API client is
 When the update interval's requests fail, the wait before the next one doubles each time, and goes
 back to the configured interval after the next success.
 
+The plugin is desktop only, since the requests need the main process.
+
 ## Install
 
 ```sh
 cd src/userplugins
-git clone --recurse-submodules https://github.com/bluscream-vencord-plugins/bahnExpert
-cd bahnExpert/bahn-expert-ts
+git clone --recurse-submodules https://github.com/bluscream-vencord-plugins/bahnExpert bahnExpert.desktop
+cd bahnExpert.desktop/bahn-expert-ts
 git sparse-checkout set --no-cone /src/ /LICENSE /README.md
 ```
 

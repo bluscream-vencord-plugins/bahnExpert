@@ -43,7 +43,8 @@
     border: 1px solid var(--input-border, transparent);
     border-radius: 4px;
     background: var(--input-background-default, var(--input-background));
-    color: var(--text-normal);
+    color: var(--text-default);
+    color-scheme: inherit;
     font-size: 14px;
     font-family: inherit;
     box-sizing: border-box;
@@ -53,15 +54,5 @@
 .vc-bahnexpert-date-input:focus {
     outline: none;
     border-color: var(--brand-500);
-}
-
-.theme-dark .vc-bahnexpert-date-input {
-    color: #dbdee1;
-    color-scheme: dark;
-}
-
-.theme-light .vc-bahnexpert-date-input {
-    color: #313338;
-    color-scheme: light;
 }
 

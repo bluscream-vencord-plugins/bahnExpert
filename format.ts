@@ -7,6 +7,7 @@
 import { moment } from "@webpack/common";
 
 import { type Abfahrt, type CommonStopInfo, type JourneyDetails } from "./bahn-expert-ts/src";
+import { PATTERNS } from "./patterns";
 
 export const PLACEHOLDERS = {
     station: "The station the board belongs to",
@@ -62,7 +63,7 @@ function relative(time: Date, withWords: boolean): string {
 }
 
 function fill(format: string, values: Record<string, string>): string {
-    return format.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
+    return format.replace(PATTERNS.placeholder, (match, key: string) => Object.hasOwn(values, key) ? values[key] : match);
 }
 
 function stopExtras(info: CommonStopInfo, cancelledStop: boolean | undefined) {
@@ -107,18 +108,18 @@ export function formatDeparture(abfahrt: Abfahrt, format: string): string {
 }
 
 /*
- * The stop to report is the one bahn.expert marks as current, which is the stop the train is at
- * or heading to. Before departure that is unset and the first stop is used; after the last
- * arrival the final stop is used. While standing at a stop the departure time is the one that
- * matters, otherwise the arrival.
+ * Reports the stop bahn.expert marks as current, else the next stop still ahead, else the final stop.
+ * While standing at a stop the departure time matters, otherwise the arrival.
  */
 export function formatTrain(journey: JourneyDetails, format: string): string {
     const { stops } = journey;
+    if (!stops.length) return "";
     const now = Date.now();
-    const index = journey.currentStop
+    const found = journey.currentStop
         ? stops.findIndex(s => s.stopPlace.evaNumber === journey.currentStop?.stopPlace.evaNumber)
-        : Math.max(0, stops.findIndex(s => ((s.departure ?? s.arrival)?.time.getTime() ?? 0) > now));
-    const stop = stops[index === -1 ? stops.length - 1 : index];
+        : stops.findIndex(s => ((s.departure ?? s.arrival)?.time.getTime() ?? 0) > now);
+    const index = found === -1 ? stops.length - 1 : found;
+    const stop = stops[index];
     const arrived = stop.arrival && stop.arrival.time.getTime() <= now;
     const info = (arrived ? stop.departure ?? stop.arrival : stop.arrival ?? stop.departure);
     if (!info) return "";
