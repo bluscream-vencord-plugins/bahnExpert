@@ -1,0 +1,3 @@
+[submodule "bahn-expert-ts"]
+	path = bahn-expert-ts
+	url = https://github.com/Bluscream/bahn-expert-ts

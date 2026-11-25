@@ -1,0 +1,67 @@
+.vc-bahnexpert-content {
+    padding-bottom: 16px;
+}
+
+.vc-bahnexpert-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    margin-top: 8px;
+}
+
+.vc-bahnexpert-placeholders {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    user-select: text;
+}
+
+.vc-bahnexpert-placeholder {
+    font-family: var(--font-code);
+    font-size: 12px;
+    user-select: text;
+}
+
+.vc-bahnexpert-date-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.vc-bahnexpert-date-buttons {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.vc-bahnexpert-date-input {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 10px;
+    border: 1px solid var(--input-border, transparent);
+    border-radius: 4px;
+    background: var(--input-background-default, var(--input-background));
+    color: var(--text-normal);
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.vc-bahnexpert-date-input:focus {
+    outline: none;
+    border-color: var(--brand-500);
+}
+
+.theme-dark .vc-bahnexpert-date-input {
+    color: #dbdee1;
+    color-scheme: dark;
+}
+
+.theme-light .vc-bahnexpert-date-input {
+    color: #313338;
+    color-scheme: light;
+}
+
